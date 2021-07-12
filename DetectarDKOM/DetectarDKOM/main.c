@@ -98,7 +98,7 @@ VOID buscarProcesosEscondidos()
 	{
 		if (*(poolFlags + i) == 1 && !findPidInActiveLinks(poolPids + i))
 		{
-			DbgPrint("[TAREA1][PROCESSHIDEN] %d ha sido escondido", *(poolPids + i));
+			DbgPrint("[DKOM][PROCESSHIDEN] %d ha sido escondido", *(poolPids + i));
 			*(poolFlags + i) = 0;
 			*(poolPids + i) = 0;
 		}
@@ -121,7 +121,7 @@ VOID ThreadCheckHiddenProcess(IN PVOID Context)
 	LARGE_INTEGER interval;
 	interval.QuadPart = -3 * 1000 * 1000 * 10;
 
-	DbgPrint("[TAREA1][THREAD] : inicio bucle infinito");
+	DbgPrint("[DKOM][THREAD] : inicio bucle infinito");
 
 	for (;;)
 	{
@@ -129,7 +129,7 @@ VOID ThreadCheckHiddenProcess(IN PVOID Context)
 
 		if (NT_SUCCESS(st))
 		{
-			DbgPrint("[TAREA1][THREAD] : delay terminado, buscando procesos escondidos...");
+			DbgPrint("[DKOM][THREAD] : delay terminado, buscando procesos escondidos...");
 			buscarProcesosEscondidos();
 		}
 
@@ -177,13 +177,13 @@ VOID addPoolValue(DWORD32* pid)
 
 	if (libre > -1)
 	{
-		DbgPrint("[TAREA1][POOL] : pid guardado en la pos %d", libre);
+		DbgPrint("[DKOM][POOL] : pid guardado en la pos %d", libre);
 		*(poolPids + libre) = *pid;
 		*(poolFlags + libre) = 1; // 1 implica que está en uso
 		return;
 	}
 
-	DbgPrint("[TAREA1][POOL][WARNING] : PID NO REGISTRADO, sin espacio para más procesos");
+	DbgPrint("[DKOM][POOL][WARNING] : PID NO REGISTRADO, sin espacio para más procesos");
 }
 
 
@@ -206,7 +206,7 @@ VOID removePoolValue(DWORD32* pid)
 			return;
 		}
 	}
-	DbgPrint("[TAREA1][POOL] : pid no listado, no quedaría espacio en el registro");
+	DbgPrint("[DKOM][POOL] : pid no listado, no quedaría espacio en el registro");
 }
 
 
@@ -215,15 +215,15 @@ VOID sCreateProcessNotifyRoutine(HANDLE ppid, HANDLE pid, BOOLEAN create)
 	if ((DWORD32)ppid == _EXPLOREREXEPID)
 	{
 		DWORD32 id = (DWORD32)pid;
-		DbgPrint("[TAREA1][NOTIFY] : pid %d es hijo del explorer", id);
+		DbgPrint("[DKOM][NOTIFY] : pid %d es hijo del explorer", id);
 		if (create)
 		{
-			DbgPrint("[TAREA1][NOTIFY] : añadiendo el proceso...");
+			DbgPrint("[DKOM][NOTIFY] : añadiendo el proceso...");
 			addPoolValue(&id);
 		}
 		else
 		{
-			DbgPrint("[TAREA1][NOTIFY] : quitando el proceso...");
+			DbgPrint("[DKOM][NOTIFY] : quitando el proceso...");
 			removePoolValue(&id);
 		}
 	}
@@ -258,7 +258,7 @@ VOID UnloadFunc(_In_ PDRIVER_OBJECT DriverObject)
 
 	ObDereferenceObject(_THREADOBJECT);
 
-	DbgPrint("[TAREA1][UNLOAD] : Unloaded Tarea1!!");
+	DbgPrint("[DKOM][UNLOAD] : Unloaded Tarea1!!");
 }
 
 NTSTATUS initializateData()
@@ -274,15 +274,15 @@ NTSTATUS initializateData()
 	RtlZeroMemory(poolPids, (sizeof(DWORD32) * flagsSize));
 	RtlZeroMemory(poolFlags, (sizeof(DWORD32) * flagsSize));
 
-	DbgPrint("[TARE1][INIT] : poolPids address %p", poolPids);
-	DbgPrint("[TARE1][INIT] : poolFlags address %p", poolFlags);
+	DbgPrint("[DKOM][INIT] : poolPids address %p", poolPids);
+	DbgPrint("[DKOM][INIT] : poolFlags address %p", poolFlags);
 
 	if (getPidByFileName("explorer.exe", &_EXPLOREREXEPID) == STATUS_UNSUCCESSFUL) {
-		DbgPrint("[TARE1][INIT] : explorer chungo");
+		DbgPrint("[DKOM][INIT] : explorer chungo");
 		return STATUS_UNSUCCESSFUL;
 	}
 
-	DbgPrint("[TARE1][INIT] : explore.exe pid = %d", _EXPLOREREXEPID);
+	DbgPrint("[DKOM][INIT] : explore.exe pid = %d", _EXPLOREREXEPID);
 
 	/*
 		Iniciar el thread que busca procesos escondidos
@@ -302,7 +302,7 @@ NTSTATUS initializateData()
 	);
 
 	if (!NT_SUCCESS(status)) {
-		DbgPrint("[TARE1][INIT] : no se ha podido crear el thread");
+		DbgPrint("[DKOM][INIT] : no se ha podido crear el thread");
 		return status;
 	}
 
@@ -344,7 +344,7 @@ NTSTATUS DispatchIOCTL(PDEVICE_OBJECT Device, PIRP Irp)
 
 	status = STATUS_UNSUCCESSFUL;
 
-	DbgPrint("[TAREA1][INFO] : No hay IOCTL soportados");
+	DbgPrint("[DKOM][INFO] : No hay IOCTL soportados");
 
 	return SimpleComplete(status, Irp);
 }
@@ -367,23 +367,23 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT     DriverObject, _In_ PUNICODE_STRING 
 	status = IoCreateDevice(DriverObject, 0, &deviceName, FILE_DEVICE_UNKNOWN, 0, FALSE, &device);
 
 	if (status != STATUS_SUCCESS) {
-		DbgPrint("[TAREA1][ERROR] : There was a problem creating the device!!");
+		DbgPrint("[DKOM][ERROR] : There was a problem creating the device!!");
 		return status;
 	}
 
 	status = IoCreateSymbolicLink(&deviceUserModeName, &deviceName);
 	if (status != STATUS_SUCCESS) {
-		DbgPrint("[TAREA1][ERROR] : There was a problem creating the symbolic Link!!");
+		DbgPrint("[DKOM][ERROR] : There was a problem creating the symbolic Link!!");
 		return status;
 	}
 
 	status = initializateData();
 	if (status != STATUS_SUCCESS) {
-		DbgPrint("[TAREA1][ERROR] : Error al reservar memoria para las listas de procesos!!");
+		DbgPrint("[DKOM][ERROR] : Error al reservar memoria para las listas de procesos!!");
 		return status;
 	}
 
-	DbgPrint("[TAREA1][INFO] : driver cargado");
+	DbgPrint("[DKOM][INFO] : driver cargado");
 
 	PsSetCreateProcessNotifyRoutine(sCreateProcessNotifyRoutine, FALSE);
 
